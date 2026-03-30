@@ -1,0 +1,85 @@
+//using esp8266 + DS3231 + module relay5v + button + contactor + 5v power supply
+//function of the system: auto turn on machine at 5AM based on DS3231
+//if before 5AM, user press button, machine on and unchanged state
+//when user want to turn off machine, press button
+//code(GPT)
+
+
+
+
+
+#include <Wire.h>
+#include <RTClib.h>
+
+RTC_DS3231 rtc;
+
+// ===== PIN THEO PHẦN CỨNG CỦA BẠN =====
+#define SDA_PIN     12   // D6
+#define SCL_PIN     13   // D7
+#define BUTTON_PIN  5    // GPIO5
+#define RELAY_PIN   15   // D5
+
+bool relayState = false;
+bool lastButtonState = HIGH;
+bool autoTriggeredToday = false;
+
+void setup() {
+  Serial.begin(9600);
+  delay(500);
+
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW);
+
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  Serial.println("BAT DAU HE THONG");
+
+  if (!rtc.begin()) {
+    Serial.println("LOI: KHONG TIM THAY DS3231");
+    while (1);
+  }
+
+  Serial.println("DS3231 OK");
+
+  // ===== SET GIO THEO LAPTOP (MO 1 LAN ROI DONG LAI) =====
+ //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+}
+
+void loop() {
+  DateTime now = rtc.now();
+
+  // ===== HIEN THI GIO =====
+  Serial.printf("[TIME] %02d:%02d:%02d\n",
+                now.hour(), now.minute(), now.second());
+
+  // ===== AUTO BAT 5H SANG =====
+  if (now.hour() == 5 && now.minute() == 0 && now.second() == 0) {
+    if (!autoTriggeredToday && !relayState) {
+      relayState = true;
+      digitalWrite(RELAY_PIN, HIGH);
+      Serial.println("RELAY ON (AUTO 5H)");
+      autoTriggeredToday = true;
+    }
+  }
+
+  // Reset cờ auto mỗi ngày
+  if (now.hour() == 0 && now.minute() == 0 && now.second() == 1) {
+    autoTriggeredToday = false;
+  }
+
+  // ===== NUT NHAN = CONG TAC TAY =====
+  bool buttonState = digitalRead(BUTTON_PIN);
+
+  if (lastButtonState == HIGH && buttonState == LOW) {
+    relayState = !relayState;
+    digitalWrite(RELAY_PIN, relayState ? HIGH : LOW);
+
+    Serial.println(relayState
+                   ? "RELAY ON (MANUAL)"
+                   : "RELAY OFF (MANUAL)");
+  }
+
+  lastButtonState = buttonState;
+  delay(500);
+}
