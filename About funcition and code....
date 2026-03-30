@@ -2,7 +2,7 @@
 //function of the system: auto turn on machine at 5AM based on DS3231
 //if before 5AM, user press button, machine on and unchanged state
 //when user want to turn off machine, press button
-//code(GPT)
+//companion: Chat GPT
 
 
 
